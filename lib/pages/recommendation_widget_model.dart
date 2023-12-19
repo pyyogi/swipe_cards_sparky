@@ -97,8 +97,9 @@ class RecommendationWidgetModel extends ChangeNotifier {
 
     response = await dio.post('http://$ipAddress:8080/reaction',
         data: formDataRequest);
-    getIncreasedIdx();
+
     await loadRecommendationsInHive();
+    getIncreasedIdx();
 
     notifyListeners();
   }

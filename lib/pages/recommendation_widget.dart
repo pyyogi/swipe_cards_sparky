@@ -134,43 +134,39 @@ class RecommendationWidget extends StatelessWidget {
                   height: MediaQuery.of(context).size.height / 1.2,
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                    child: Draggable(
-                      axis: Axis.horizontal,
-                      childWhenDragging: RecommendCardWidget(
-                          recommendation: recommendations[
-                              Provider.of<RecommendationWidgetModel>(
-                        context,
-                      ).getCurrentIdx()]),
-                      child: RecommendCardWidget(
-                        recommendation: recommendation,
-                      ),
-                      feedback: RotationTransition(
-                        turns: AlwaysStoppedAnimation(15 / 360),
+                    child: Stack(children: [
+                      Draggable(
+                        // axis: Axis.horizontal,
+                        childWhenDragging:
+                            RecommendCardWidget(recommendation: recommendation),
                         child: RecommendCardWidget(
                           recommendation: recommendation,
                         ),
-                      ),
+                        feedback: RecommendCardWidget(
+                          recommendation: recommendation,
+                        ),
 
-                      // Transform.scale(
-                      //   scale: 1.2,
-                      // child: RecommendCardWidget(
-                      //   recommendation: recommendation,
-                      // ),
-                      // ),
-                      onDragEnd: (drag) {
-                        if (drag.velocity.pixelsPerSecond.dx < 0) {
-                          Provider.of<RecommendationWidgetModel>(context,
-                                  listen: false)
-                              .sendReaction(userId, recommendation.id, false);
-                          print("Swiped left");
-                        } else {
-                          Provider.of<RecommendationWidgetModel>(context,
-                                  listen: false)
-                              .sendReaction(userId, recommendation.id, true);
-                          print("Swiped right");
-                        }
-                      },
-                    ),
+                        // Transform.scale(
+                        //   scale: 1.2,
+                        // child: RecommendCardWidget(
+                        //   recommendation: recommendation,
+                        // ),
+                        // ),
+                        onDragEnd: (drag) {
+                          if (drag.velocity.pixelsPerSecond.dx < 0) {
+                            Provider.of<RecommendationWidgetModel>(context,
+                                    listen: false)
+                                .sendReaction(userId, recommendation.id, false);
+                            print("Swiped left");
+                          } else {
+                            Provider.of<RecommendationWidgetModel>(context,
+                                    listen: false)
+                                .sendReaction(userId, recommendation.id, true);
+                            print("Swiped right");
+                          }
+                        },
+                      ),
+                    ]),
                   ),
                 );
               }
@@ -203,22 +199,126 @@ class RecommendCardWidget extends StatelessWidget {
                   Color.fromARGB(0, 0, 0, 0),
                 ], begin: Alignment.bottomCenter, end: Alignment.topCenter)),
           ),
-          Positioned(
-            bottom: 30,
-            left: 20,
-            child: Column(
+          CardBottomWidget(recommendation: recommendation)
+
+          // Positioned(
+          //   bottom: 30,
+          //   left: 20,
+          //   child: Column(
+          //     children: [
+          //       Text(
+          //         '${recommendation.name}, ${recommendation.age}',
+          //         style: TextStyle(fontSize: 24, color: Colors.white),
+          //       ),
+          //     ],
+          //   ),
+          // )
+        ],
+      ),
+
+      // child: Text(recommendation.toString()),
+    );
+  }
+}
+
+class CardBottomWidget extends StatelessWidget {
+  const CardBottomWidget({
+    super.key,
+    required this.recommendation,
+  });
+
+  final Recommendation recommendation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: 10),
+            child: Text(
+              '${recommendation.name}, ${recommendation.age}',
+              style: TextStyle(fontSize: 24, color: Colors.white),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${recommendation.name}, ${recommendation.age}',
-                  style: TextStyle(fontSize: 24, color: Colors.white),
+                InkWell(
+                  onTap: () => Provider.of<RecommendationWidgetModel>(context,
+                          listen: false)
+                      .sendReaction(userId, recommendation.id, false),
+                  child: const ChoiceButton(
+                    width: 60,
+                    height: 60,
+                    size: 25,
+                    color: Colors.deepOrange,
+                    icon: Icons.clear_rounded,
+                    background: Colors.white,
+                  ),
                 ),
+                InkWell(
+                  onTap: () => Provider.of<RecommendationWidgetModel>(context,
+                          listen: false)
+                      .sendReaction(userId, recommendation.id, true),
+                  child: const ChoiceButton(
+                    width: 60,
+                    height: 60,
+                    size: 25,
+                    color: Colors.white,
+                    icon: Icons.favorite,
+                    background: Colors.deepOrange,
+                  ),
+                )
               ],
             ),
           )
         ],
       ),
+    );
+  }
+}
 
-      // child: Text(recommendation.toString()),
+class ChoiceButton extends StatelessWidget {
+  final double width;
+  final double height;
+  final double size;
+  final Color color;
+  final Color background;
+
+  final IconData icon;
+
+  const ChoiceButton(
+      {super.key,
+      this.width = 60,
+      this.height = 60,
+      this.size = 25,
+      required this.color,
+      required this.icon,
+      required this.background});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: background,
+        boxShadow: [
+          BoxShadow(
+              spreadRadius: 4, blurRadius: 4, color: Colors.grey.withAlpha(50))
+        ],
+      ),
+      child: Icon(
+        icon,
+        color: color,
+      ),
     );
   }
 }
