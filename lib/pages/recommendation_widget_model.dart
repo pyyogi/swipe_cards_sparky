@@ -54,13 +54,32 @@ class RecommendationWidgetModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<int> getCurrentIdx() async {
+  int getCurrentIdx() {
     // final recommendSettingsBox = await recommendSettingsBox;
     RecommendationSettings? recommendationSettings =
         recommendSettingsBox.get(0);
-    print(recommendationSettings?.currentIdx ?? 0);
+    // print(recommendationSettings?.currentIdx ?? 0);
+    // notifyListeners();
     return recommendationSettings?.currentIdx ?? 0;
   }
+
+  int getIncreasedIdx() {
+    RecommendationSettings? recommendationSettings =
+        recommendSettingsBox.get(0);
+    final currIdx = recommendationSettings?.increaseCurrentIdx() ?? 0;
+    if (currIdx == 0) {
+      loadRecommendationsInHive();
+    }
+    recommendSettingsBox.put(0, recommendationSettings);
+    return currIdx;
+    // notifyListeners();
+  }
+
+  // int getRecommendationIdx() {
+  //   print(getCurrentIdx());
+  //   Recommendation recommendation = recommendBox.get(getCurrentIdx() - 1);
+  //   return recommendation.id;
+  // }
 
   Future<Recommendation?> getRecommendation() async {
     // final recommendBox = await recommendBox;
@@ -69,16 +88,58 @@ class RecommendationWidgetModel extends ChangeNotifier {
     return recommendation;
   }
 
-  Future<List<Recommendation>> loadData(int userId, int limit) async {
+  void sendReaction(int userId, int toId, bool isLiked) async {
+    final formDataRequest = FormData.fromMap({
+      'user_id': userId,
+      'to_id': toId,
+      'like': isLiked,
+    });
+
+    response = await dio.post('http://$ipAddress:8080/reaction',
+        data: formDataRequest);
+    getIncreasedIdx();
+    await loadRecommendationsInHive();
+
+    notifyListeners();
+  }
+
+  Future<List<Recommendation>> loadRecommendationsInHive() async {
+    RecommendationSettings? recommendationSettings =
+        recommendSettingsBox.get(0);
+    int currentIdx = getCurrentIdx();
+    int? realSize = recommendationSettings?.realSize ?? 0;
+    int? limit = recommendationSettings?.limit ?? 50;
+    print('Limit $limit');
+    List<Recommendation> recommendations = <Recommendation>[];
+    if (currentIdx >= realSize || realSize == 0) {
+      print('Вошел');
+      recommendBox.clear();
+      recommendations = await loadDataFromServer(userId, limit);
+      print('recommendations: $recommendations');
+      for (int i = 0; i < recommendations.length; i++) {
+        recommendBox.put(i, recommendations[i]);
+      }
+
+      recommendSettingsBox.put(
+          0, RecommendationSettings(realSize: recommendations.length));
+      // notifyListeners();
+    } else {
+      print('Не вошел');
+    }
+
+    return recommendations;
+  }
+
+  Future<List<Recommendation>> loadDataFromServer(int userId, int limit) async {
     List<Recommendation> recommendations = [];
     try {
       final formDataRequest = FormData.fromMap({
         'user_id': userId,
         'sex': true,
         'distance': 1,
-        'limit': 1,
+        'limit': 50,
         'min_age': 20,
-        'max_age': 3000
+        'max_age': 3000,
       });
       response = await dio.post('http://$ipAddress:8080/recommendations',
           data: formDataRequest);
@@ -103,14 +164,29 @@ class RecommendationWidgetModel extends ChangeNotifier {
               longitude: recommendation['longitude'].toDouble(),
               imgPath: recommendation['img_path']))
           .toList();
-      print(recommendations[0]);
+      // print(recommendations[0]);
       // boxUser.deleteAll(boxUser.keys);
       // boxUser.put(0, User(id: int.parse(response.data)));
+
       return recommendations;
     } on DioException catch (e) {
       print(e.response!.statusCode!);
       return recommendations;
     }
+  }
+
+  Future<List<Recommendation>> showRecommends() async {
+    RecommendationSettings? recommendationSettings =
+        recommendSettingsBox.get(0);
+    int currentIdx = getCurrentIdx();
+    int limit = recommendationSettings?.limit ?? 50;
+    int realSize = recommendationSettings?.realSize ?? 0;
+    print('realSize: $realSize');
+    print('currentIdx: $currentIdx');
+
+    await loadRecommendationsInHive();
+
+    return recommendBox.values.toList() as List<Recommendation>;
   }
 
   Future<Recommendation> showRecommend() async {
@@ -119,7 +195,7 @@ class RecommendationWidgetModel extends ChangeNotifier {
 
     RecommendationSettings? recommendationSettings =
         recommendSettingsBox.get(0);
-    int currentIdx = recommendationSettings?.currentIdx ?? 0;
+    int currentIdx = getCurrentIdx();
     // int startPart1 = recommendationSettings?.startPart1 ?? 0;
     // int endPart1 = recommendationSettings?.endPart1 ?? 49;
     // int startPart2 = recommendationSettings?.startPart2 ?? 50;
@@ -129,20 +205,22 @@ class RecommendationWidgetModel extends ChangeNotifier {
     print('realSize: $realSize');
     print('currentIdx: $currentIdx');
 
-    if (currentIdx >= realSize || realSize == 0) {
-      print('Вошел');
-      recommendBox.clear();
-      List<Recommendation> recommendations = await loadData(userId, limit);
-      print('recommendations: $recommendations');
-      for (int i = 0; i < recommendations.length; i++) {
-        recommendBox.put(i, recommendations[i]);
-      }
-    } else {
-      print('Не вошел');
-    }
-    realSize = recommendations.length;
-    recommendSettingsBox.put(0,
-        RecommendationSettings(currentIdx: currentIdx + 1, realSize: realSize));
+    // if (currentIdx >= realSize || realSize == 0) {
+    //   print('Вошел');
+    //   recommendBox.clear();
+    //   List<Recommendation> recommendations = await loadData(userId, limit);
+    //   print('recommendations: $recommendations');
+    //   for (int i = 0; i < recommendations.length; i++) {
+    //     recommendBox.put(i, recommendations[i]);
+    //   }
+    // } else {
+    //   print('Не вошел');
+    // }
+    // realSize = recommendations.length;
+    // recommendSettingsBox.put(0,
+    //     RecommendationSettings(currentIdx: currentIdx + 1, realSize: realSize));
+    await loadRecommendationsInHive();
+
     Recommendation? recommendation = recommendBox.get(currentIdx);
     if (recommendation == null) {
       recommendation = recommendBox.get(0);
@@ -151,6 +229,7 @@ class RecommendationWidgetModel extends ChangeNotifier {
       throw Exception('No recommendations found');
     }
     return recommendation;
+    // return recommendBox.values.toList() as List<Recommendation>;
 
     // return recommendBox.get(currentIdx - 1) ?? recommendBox.get(0);
     // if (startPart1 <= currentIdx && currentIdx <= endPart1 ||

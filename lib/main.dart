@@ -37,7 +37,7 @@ class MainApp extends StatelessWidget {
           create: (context) => RecommendationWidgetModel(),
         )
       ],
-      child: const MaterialApp(home: RecommendationWidget()),
+      child: MaterialApp(home: RecommendationWidget()),
     );
   }
 }

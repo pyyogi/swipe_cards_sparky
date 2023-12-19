@@ -6,11 +6,19 @@ part 'recommendation_settings_model.g.dart';
 @HiveType(typeId: 11)
 class RecommendationSettings extends ChangeNotifier {
   RecommendationSettings(
-      {this.currentIdx = 0, this.limit = 50, required this.realSize});
+      {this.currentIdx = 0, this.limit = 50, this.realSize = 0});
 
   @HiveField(0)
   int currentIdx;
 
+  int increaseCurrentIdx() {
+    if (currentIdx + 1 < realSize) {
+      currentIdx += 1;
+    } else {
+      currentIdx = 0;
+    }
+    return currentIdx;
+  }
   // @HiveField(1)
   // int startPart1 = 0;
 
